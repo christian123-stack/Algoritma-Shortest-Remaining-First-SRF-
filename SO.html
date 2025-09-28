@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="Screenshot 2025-09-28 133612.png">
+  <title>Simulasi SRF - Penjadwalan Pasien</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f4f6f9;
+      display: flex;
+      justify-content: center;
+    }
+    .container {
+      max-width: 900px;
+      width: 100%;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    .inputRow {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+    .inputRow div {
+      flex: 1;
+      min-width: 120px;
+      display: flex;
+      flex-direction: column;
+    }
+    label {
+      font-size: 14px;
+      margin-bottom: 4px;
+      color: #444;
+    }
+    input {
+      padding: 6px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    button {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      background: #4CAF50;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    #resetBtn { background:#e53935;
+   }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      margin-top: 15px;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: center;
+    }
+    th {
+      background: #f0f0f0;
+    }
+    #ganttWrapper {
+      margin-top: 30px;
+      text-align: center;
+    }
+    #ganttTime {
+      display: flex;
+      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+    #ganttTime div {
+      text-align: left;
+    }
+    #ganttChart {
+      display: flex;
+      border: 2px solid #333;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .ganttBlock {
+      padding: 12px 0;
+      text-align: center;
+      color: #fff;
+      font-weight: bold;
+      border-right: 1px solid #fff;
+    }
+    .ganttBlock:last-child {
+      border-right: none;
+    }
+    h2 {
+      margin: 15px 0 10px;
+      color: #444;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+<h1>Simulasi Penjadwalan Pasien Menggunakan Algoritma Shortest Remaining First (SRF)</h1>
+
+<div class="inputRow">
+  <div>
+    <label>Nama Pasien</label>
+    <input type="text" id="pname" placeholder="cth: P1">
+  </div>
+  <div>
+    <label>Arrival Time</label>
+    <input type="number" id="parrival" min="0">
+  </div>
+  <div>
+    <label>Burst Time</label>
+    <input type="number" id="pburst" min="1">
+  </div>
+  <div style="align-self:flex-end;">
+    <button id="addBtn">Tambah Pasien</button>
+  </div>
+</div>
+
+<div style="margin-bottom:15px;">
+  <button id="runBtn">Jalankan SRF</button>
+  <button id="resetBtn">Reset Data</button>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>No</th>
+      <th>Nama Pasien</th>
+      <th>Arrival</th>
+      <th>Burst</th>
+    </tr>
+  </thead>
+  <tbody id="processTable"></tbody>
+</table>
+
+<div id="ganttWrapper">
+  <h2>Gantt Chart</h2>
+  <div id="ganttTime"></div>
+  <div id="ganttChart"></div>
+</div>
+
+<div id="resultWrapper">
+  <h2>Hasil Perhitungan</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Nama Pasien</th>
+        <th>Completion Time</th>
+        <th>Turnaround Time (TAT)</th>
+        <th>Waiting Time (WT)</th>
+      </tr>
+    </thead>
+    <tbody id="resultTable"></tbody>
+  </table>
+</div>
+
+</div>
+
+<script>
+let processes = JSON.parse(localStorage.getItem("processes")) || [];
+let gantt = JSON.parse(localStorage.getItem("gantt")) || [];
+let results = JSON.parse(localStorage.getItem("results")) || [];
+const colors = ["#e57373","#64b5f6","#81c784","#ffb74d","#ba68c8","#4db6ac","#ffd54f","#90a4ae"];
+
+const pname = document.getElementById("pname");
+const parrival = document.getElementById("parrival");
+const pburst = document.getElementById("pburst");
+const tableBody = document.getElementById("processTable");
+const resultBody = document.getElementById("resultTable");
+
+// Tambah Pasien
+document.getElementById("addBtn").addEventListener("click", () => {
+  const name = pname.value.trim();
+  const arrival = parseInt(parrival.value);
+  const burst = parseInt(pburst.value);
+
+  if (!name || isNaN(arrival) || isNaN(burst)) {
+    alert("Isi semua data pasien!");
+    return;
+  }
+
+  processes.push({
+    id: processes.length + 1,
+    name: name,
+    arrival: arrival,
+    burst: burst,
+    remaining: burst
+  });
+
+  saveData();
+  refreshTable();
+
+  pname.value = "";
+  parrival.value = "";
+  pburst.value = "";
+});
+
+// Jalankan SRF
+document.getElementById("runBtn").addEventListener("click", () => {
+  gantt = runSRF(processes);
+  results = calculateResults(processes, gantt);
+  saveData();
+  renderGantt();
+  renderResults();
+});
+
+// Reset Data
+document.getElementById("resetBtn").addEventListener("click", () => {
+  processes = [];
+  gantt = [];
+  results = [];
+  saveData();
+  refreshTable();
+  renderGantt();
+  renderResults();
+});
+
+// Refresh Tabel Input
+function refreshTable() {
+  tableBody.innerHTML = processes.map((p,i) => `
+    <tr>
+      <td>${i+1}</td>
+      <td>${p.name}</td>
+      <td>${p.arrival}</td>
+      <td>${p.burst}</td>
+    </tr>
+  `).join("");
+}
+
+// Render Gantt Chart
+function renderGantt() {
+  if (gantt.length === 0) {
+    document.getElementById("ganttChart").innerHTML = "";
+    document.getElementById("ganttTime").innerHTML = "";
+    return;
+  }
+
+  let ganttHtml = "";
+  let timeHtml = "";
+  for (let i = 0; i < gantt.length; i++) {
+    const entry = gantt[i];
+    const color = colors[entry.pid % colors.length];
+    ganttHtml += `<div class="ganttBlock" style="background:${color}; flex:${entry.duration}">${entry.name}</div>`;
+    timeHtml += `<div style="flex:${entry.duration}">${entry.start}</div>`;
+  }
+  timeHtml += `<div>${gantt[gantt.length-1].end}</div>`;
+
+  document.getElementById("ganttChart").innerHTML = ganttHtml;
+  document.getElementById("ganttTime").innerHTML = timeHtml;
+}
+
+// Render Hasil
+function renderResults() {
+  resultBody.innerHTML = results.map(r => `
+    <tr>
+      <td>${r.name}</td>
+      <td>${r.completion}</td>
+      <td>${r.tat}</td>
+      <td>${r.wt}</td>
+    </tr>
+  `).join("");
+}
+
+// Algoritma SRF
+function runSRF(processList) {
+  let time = 0;
+  let completed = 0;
+  let n = processList.length;
+  let localProcs = processList.map(p => ({...p}));
+  let ganttChart = [];
+
+  while (completed < n) {
+    let idx = -1;
+    let minRem = Infinity;
+
+    for (let i = 0; i < n; i++) {
+      if (localProcs[i].arrival <= time && localProcs[i].remaining > 0) {
+        if (localProcs[i].remaining < minRem) {
+          minRem = localProcs[i].remaining;
+          idx = i;
+        }
+      }
+    }
+
+    if (idx === -1) {
+      time++;
+      continue;
+    }
+
+    let current = localProcs[idx];
+    let start = time;
+    time++;
+    current.remaining--;
+
+    if (ganttChart.length && ganttChart[ganttChart.length-1].pid === current.id) {
+      ganttChart[ganttChart.length-1].duration++;
+      ganttChart[ganttChart.length-1].end = time;
+    } else {
+      ganttChart.push({
+        pid: current.id,
+        name: current.name,
+        start: start,
+        end: time,
+        duration: 1
+      });
+    }
+
+    if (current.remaining === 0) completed++;
+  }
+
+  return ganttChart;
+}
+
+// Hitung hasil
+function calculateResults(processList, ganttChart) {
+  let results = [];
+  for (let p of processList) {
+    let completion = Math.max(...ganttChart.filter(g => g.pid === p.id).map(g => g.end));
+    let tat = completion - p.arrival;
+    let wt = tat - p.burst;
+    results.push({ name: p.name, completion, tat, wt });
+  }
+  return results;
+}
+
+// Simpan ke LocalStorage
+function saveData() {
+  localStorage.setItem("processes", JSON.stringify(processes));
+  localStorage.setItem("gantt", JSON.stringify(gantt));
+  localStorage.setItem("results", JSON.stringify(results));
+}
+
+// Load saat pertama kali
+refreshTable();
+renderGantt();
+renderResults();
+</script>
+
+</body>
+</html>
