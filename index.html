@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <link rel="icon" type="image/png" href="Screenshot 2025-09-28 133612.png">
-  <title>Simulasi SRF - Penjadwalan Pasien</title>
+  <title>Simulasi SRF - Antrian Kasir</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -59,8 +59,7 @@
     button:hover {
       opacity: 0.9;
     }
-    #resetBtn { background:#e53935;
-   }
+    #resetBtn { background:#e53935; }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -116,23 +115,23 @@
 <body>
 <div class="container">
 
-<h1>Simulasi Penjadwalan Pasien Menggunakan Algoritma Shortest Remaining First (SRF)</h1>
+<h1>Simulasi Penjadwalan Antrian Kasir Menggunakan Algoritma Shortest Remaining First (SRF)</h1>
 
 <div class="inputRow">
   <div>
-    <label>Nama Pasien</label>
-    <input type="text" id="pname" placeholder="cth: P1">
+    <label>Nama Customer</label>
+    <input type="text" id="pname" placeholder="cth: C1">
   </div>
   <div>
     <label>Arrival Time</label>
     <input type="number" id="parrival" min="0">
   </div>
   <div>
-    <label>Burst Time</label>
+    <label>Burst Time (Lama Layanan)</label>
     <input type="number" id="pburst" min="1">
   </div>
   <div style="align-self:flex-end;">
-    <button id="addBtn">Tambah Pasien</button>
+    <button id="addBtn">Tambah Customer</button>
   </div>
 </div>
 
@@ -145,7 +144,7 @@
   <thead>
     <tr>
       <th>No</th>
-      <th>Nama Pasien</th>
+      <th>Nama Customer</th>
       <th>Arrival</th>
       <th>Burst</th>
     </tr>
@@ -164,7 +163,7 @@
   <table>
     <thead>
       <tr>
-        <th>Nama Pasien</th>
+        <th>Nama Customer</th>
         <th>Completion Time</th>
         <th>Turnaround Time (TAT)</th>
         <th>Waiting Time (WT)</th>
@@ -188,14 +187,14 @@ const pburst = document.getElementById("pburst");
 const tableBody = document.getElementById("processTable");
 const resultBody = document.getElementById("resultTable");
 
-// Tambah Pasien
+// Tambah Customer
 document.getElementById("addBtn").addEventListener("click", () => {
   const name = pname.value.trim();
   const arrival = parseInt(parrival.value);
   const burst = parseInt(pburst.value);
 
   if (!name || isNaN(arrival) || isNaN(burst)) {
-    alert("Isi semua data pasien!");
+    alert("Isi semua data customer!");
     return;
   }
 
